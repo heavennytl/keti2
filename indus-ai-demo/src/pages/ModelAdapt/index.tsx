@@ -1,7 +1,9 @@
-import { useEffect } from 'react';
-import { Card, Row, Col, Statistic, Table, Tag, Button, Select, Progress } from 'antd';
-import { PlusOutlined, DownloadOutlined, RollbackOutlined } from '@ant-design/icons';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card, Row, Col, Statistic, Table, Tag, Button, Select, Progress, message } from 'antd';
+import { PlusOutlined, DownloadOutlined, RollbackOutlined, CaretRightOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useModelAdaptStore } from '@/stores/useModelAdaptStore';
+import type { AdaptTask } from '@/types';
 
 const statusColors: Record<string, string> = {
   '待开始': 'default',
@@ -18,12 +20,87 @@ const adaptSteps = [
   { key: '5', title: '适配验证', description: '对比适配前后效果，验证适配结果' },
 ];
 
+const stepDetails: Record<number, { label: string; items: string[] }> = {
+  1: {
+    label: '环境检测',
+    items: [
+      '检测到目标产线：焊接车间-A线',
+      '检测到硬件：海康相机 + 西门子PLC + ABB机器人',
+      '检测到协议：OPC UA',
+      '环境条件：低光照、高噪声',
+    ],
+  },
+  2: {
+    label: '兼容性评估',
+    items: [
+      '硬件兼容性：92%',
+      '协议兼容性：100%',
+      '环境适配难度：中等',
+      '总体评估：推荐适配',
+    ],
+  },
+  3: {
+    label: '适配配置',
+    items: [
+      '自动选择适配器：HikVision-CAM-v2',
+      '自动选择适配器：Siemens-S7-v1',
+      '自动选择适配器：ABB-IRB-v3',
+      '协议参数已自动配置',
+      '环境补偿：低光照增强 + 中值滤波',
+    ],
+  },
+  4: {
+    label: '适配执行',
+    items: [
+      '[INFO] 硬件适配器加载完成',
+      '[INFO] 协议参数配置完成',
+      '[INFO] 环境补偿参数配置完成',
+      '[INFO] 适配完成！耗时：45秒',
+    ],
+  },
+  5: {
+    label: '适配验证',
+    items: [
+      '适配前精度：72% → 适配后精度：94%',
+      '适配前延迟：180ms → 适配后延迟：65ms',
+      '结论：适配成功 ✓',
+    ],
+  },
+};
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export default function ModelAdapt() {
+  const navigate = useNavigate();
   const {
     tasks, templates, adapters, history, comparison,
     fetchTasks, fetchTemplates, fetchAdapters, fetchHistory, fetchComparison,
-    setCurrentTask, currentTask,
+    setCurrentTask, currentTask, executeTask, rollbackTask,
   } = useModelAdaptStore();
+
+  const [isAdapting, setIsAdapting] = useState(false);
+  const [adaptLogs, setAdaptLogs] = useState<string[]>([]);
+  const [adaptProgress, setAdaptProgress] = useState(0);
+  const [adaptComplete, setAdaptComplete] = useState(false);
+  const [mode, setMode] = useState<'auto' | 'manual'>('auto');
+  const [manualStep, setManualStep] = useState(0);
+  const [showComparison, setShowComparison] = useState(false);
+  const [animatingValues, setAnimatingValues] = useState({
+    accuracyBefore: 72,
+    accuracyAfter: 72,
+    latencyBefore: 180,
+    latencyAfter: 180,
+  });
+
+  // 使用 ref 跟踪当前任务，避免闭包问题
+  const currentTaskRef = useRef(currentTask);
+  currentTaskRef.current = currentTask;
+  const isAdaptingRef = useRef(isAdapting);
+  isAdaptingRef.current = isAdapting;
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
+  const manualStepRef = useRef(manualStep);
+  manualStepRef.current = manualStep;
 
   useEffect(() => {
     fetchTasks();
@@ -32,6 +109,123 @@ export default function ModelAdapt() {
     fetchHistory();
     fetchComparison('1');
   }, []);
+
+  const resetAdapt = useCallback(() => {
+    setIsAdapting(false);
+    setAdaptLogs([]);
+    setAdaptProgress(0);
+    setAdaptComplete(false);
+    setManualStep(0);
+    setShowComparison(false);
+    setAnimatingValues({
+      accuracyBefore: 72,
+      accuracyAfter: 72,
+      latencyBefore: 180,
+      latencyAfter: 180,
+    });
+  }, []);
+
+  const startAdapt = useCallback(async () => {
+    const task = currentTaskRef.current;
+    if (!task) {
+      message.warning('请先选择一个适配任务');
+      return;
+    }
+    if (isAdaptingRef.current) return;
+
+    resetAdapt();
+    setIsAdapting(true);
+    executeTask(task.id);
+
+    for (let step = 1; step <= 5; step++) {
+      setCurrentTask({ ...task, currentStep: step, status: '进行中' as const });
+
+      // 添加日志
+      const stepInfo = stepDetails[step];
+      setAdaptLogs((prev) => [...prev, `[INFO] 开始${stepInfo.label}...`]);
+
+      // 模拟步骤执行时间
+      const stepTime = step === 3 ? 1500 : step === 5 ? 1500 : 2000;
+      const stepStartTime = Date.now();
+      while (Date.now() - stepStartTime < stepTime) {
+        const elapsed = Date.now() - stepStartTime;
+        const stepProgress = Math.min(100, Math.round((elapsed / stepTime) * 100));
+        setAdaptProgress(Math.min(100, Math.round((step - 1) * 20 + stepProgress * 0.2)));
+        await delay(50);
+      }
+
+      // 步骤完成，添加详情日志
+      stepInfo.items.forEach((item) => {
+        setAdaptLogs((prev) => [...prev, `  ${item}`]);
+      });
+      setAdaptLogs((prev) => [...prev, `[INFO] ${stepInfo.label}完成 ✓`]);
+      setAdaptProgress(step * 20);
+
+      // 手动模式：等待用户确认
+      if (modeRef.current === 'manual' && step < 5) {
+        setManualStep(step);
+        await new Promise<void>((resolve) => {
+          const interval = setInterval(() => {
+            if (manualStepRef.current !== step) {
+              clearInterval(interval);
+              resolve();
+            }
+          }, 100);
+        });
+      }
+    }
+
+    // 适配完成
+    setAdaptComplete(true);
+    setAdaptProgress(100);
+    setCurrentTask({ ...task, status: '已完成', progress: 100, currentStep: 5 });
+    setShowComparison(true);
+
+    // 动画展示对比数据
+    const targetValues = {
+      accuracyAfter: 94,
+      latencyAfter: 65,
+    };
+    const duration = 1000;
+    const animStartTime = Date.now();
+    while (Date.now() - animStartTime < duration) {
+      const elapsed = Date.now() - animStartTime;
+      const ratio = Math.min(1, elapsed / duration);
+      setAnimatingValues({
+        accuracyBefore: 72,
+        accuracyAfter: Math.round(72 + (targetValues.accuracyAfter - 72) * ratio),
+        latencyBefore: 180,
+        latencyAfter: Math.round(180 + (targetValues.latencyAfter - 180) * ratio),
+      });
+      await delay(30);
+    }
+    setAnimatingValues({
+      accuracyBefore: 72,
+      accuracyAfter: 94,
+      latencyBefore: 180,
+      latencyAfter: 65,
+    });
+
+    setIsAdapting(false);
+    message.success('适配完成！');
+  }, [executeTask, setCurrentTask, resetAdapt]);
+
+  const handleManualConfirm = useCallback(() => {
+    setManualStep((prev) => prev + 1);
+  }, []);
+
+  const handleManualRollback = useCallback(() => {
+    const task = currentTaskRef.current;
+    if (task) {
+      rollbackTask(task.id);
+      setCurrentTask({ ...task, currentStep: Math.max(0, task.currentStep - 1) });
+      setManualStep((prev) => Math.max(1, prev - 1));
+    }
+  }, [rollbackTask, setCurrentTask]);
+
+  const goToDeploy = useCallback(() => {
+    navigate('/model-deploy?adaptedModel=WeldDetect-v2');
+  }, [navigate]);
 
   const taskColumns = [
     { title: '模型名称', dataIndex: 'modelName', key: 'modelName' },
@@ -51,6 +245,24 @@ export default function ModelAdapt() {
       render: (progress: number) => <Progress percent={progress} size="small" />,
     },
     { title: '负责人', dataIndex: 'assignee', key: 'assignee' },
+    {
+      title: '操作', key: 'action',
+      render: (_: unknown, record: AdaptTask) => (
+        <Button
+          type="primary"
+          size="small"
+          icon={<CaretRightOutlined />}
+          disabled={isAdapting || record.status === '已完成'}
+          onClick={(e) => {
+            e.stopPropagation();
+            setCurrentTask(record);
+            setTimeout(() => startAdapt(), 100);
+          }}
+        >
+          一键适配
+        </Button>
+      ),
+    },
   ];
 
   const templateColumns = [
@@ -127,8 +339,16 @@ export default function ModelAdapt() {
               size="small"
               pagination={false}
               onRow={(record) => ({
-                onClick: () => setCurrentTask(record),
-                style: { cursor: 'pointer' },
+                onClick: () => {
+                  if (!isAdapting) {
+                    setCurrentTask(record);
+                    resetAdapt();
+                  }
+                },
+                style: {
+                  cursor: 'pointer',
+                  background: currentTask?.id === record.id ? 'rgba(22, 119, 255, 0.08)' : undefined,
+                },
               })}
             />
           </Card>
@@ -137,31 +357,85 @@ export default function ModelAdapt() {
         {/* 中间：适配工作流 + 对比视图 */}
         <Col span={10}>
           {/* 适配工作流 */}
-          <Card title="适配工作流" style={{ marginBottom: 16 }}>
+          <Card
+            title="适配工作流"
+            extra={
+              !adaptComplete && currentTask && currentTask.status !== '已完成' ? (
+                <Button
+                  type="primary"
+                  icon={<CaretRightOutlined />}
+                  onClick={startAdapt}
+                  loading={isAdapting}
+                  disabled={isAdapting || !currentTask}
+                >
+                  {isAdapting ? '适配中...' : '一键适配'}
+                </Button>
+              ) : null
+            }
+          >
             <div style={{ marginBottom: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
               <span style={{ color: '#a0a0a0', fontSize: 13 }}>适配模式：</span>
-              <Tag color="blue">自动适配（推荐）</Tag>
-              <Tag style={{ cursor: 'pointer' }}>手动引导适配</Tag>
+              <Tag
+                color={mode === 'auto' ? 'blue' : 'default'}
+                style={{ cursor: 'pointer' }}
+                onClick={() => !isAdapting && setMode('auto')}
+              >
+                自动适配（推荐）
+              </Tag>
+              <Tag
+                color={mode === 'manual' ? 'blue' : 'default'}
+                style={{ cursor: 'pointer' }}
+                onClick={() => !isAdapting && setMode('manual')}
+              >
+                手动引导适配
+              </Tag>
             </div>
+
+            {/* 适配进度条 */}
+            {isAdapting && (
+              <div style={{ marginBottom: 12 }}>
+                <Progress percent={adaptProgress} size="small" />
+              </div>
+            )}
+
             <div className="step-flow">
               {adaptSteps.map((step, index) => {
                 const stepNum = index + 1;
-                const isActive = currentTask?.currentStep === stepNum;
-                const isCompleted = (currentTask?.currentStep ?? 0) > stepNum;
+                const isActive = currentTask?.currentStep === stepNum && isAdapting;
+                const isCompleted = (currentTask?.currentStep ?? 0) > stepNum || (adaptComplete && stepNum <= 5);
                 const isError = currentTask?.status === '失败' && currentTask?.currentStep === stepNum;
                 return (
                   <div
                     key={step.key}
                     className={`step-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''} ${isError ? 'error' : ''}`}
                   >
-                    <div className="step-number">{stepNum}</div>
+                    <div className="step-number">
+                      {isCompleted ? '✓' : stepNum}
+                    </div>
                     <div className="step-content">
-                      <div style={{ fontWeight: 600, marginBottom: 4 }}>{step.title}</div>
+                      <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                        {step.title}
+                        {isActive && <Tag color="blue" style={{ marginLeft: 8, fontSize: 11 }}>执行中...</Tag>}
+                        {isCompleted && !isActive && <Tag color="success" style={{ marginLeft: 8, fontSize: 11 }}>已完成</Tag>}
+                      </div>
                       <div style={{ fontSize: 12, color: '#a0a0a0' }}>{step.description}</div>
-                      {isActive && currentTask?.mode === 'manual' && (
+
+                      {/* 步骤详情 */}
+                      {isActive && isAdapting && stepDetails[stepNum] && (
+                        <div style={{ marginTop: 8, padding: 8, background: 'rgba(22, 119, 255, 0.05)', borderRadius: 4 }}>
+                          {stepDetails[stepNum].items.map((item, i) => (
+                            <div key={i} style={{ fontSize: 12, color: '#e5e5e5', marginBottom: 2 }}>
+                              {item}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* 手动模式确认/回退按钮 */}
+                      {mode === 'manual' && isActive && !adaptComplete && (
                         <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-                          <Button size="small" icon={<RollbackOutlined />}>回退</Button>
-                          <Button size="small" type="primary">确认</Button>
+                          <Button size="small" icon={<RollbackOutlined />} onClick={handleManualRollback}>回退</Button>
+                          <Button size="small" type="primary" onClick={handleManualConfirm}>确认</Button>
                         </div>
                       )}
                     </div>
@@ -169,10 +443,53 @@ export default function ModelAdapt() {
                 );
               })}
             </div>
+
+            {/* 适配日志 */}
+            {adaptLogs.length > 0 && (
+              <div style={{
+                marginTop: 12,
+                padding: 8,
+                background: '#0d0d0d',
+                borderRadius: 4,
+                maxHeight: 120,
+                overflow: 'auto',
+                fontFamily: 'monospace',
+                fontSize: 12,
+              }}>
+                {adaptLogs.map((log, i) => (
+                  <div key={i} style={{
+                    color: log.includes('✓') ? '#52c41a' : log.includes('ERROR') ? '#ff4d4f' : '#a0a0a0',
+                    marginBottom: 2,
+                  }}>
+                    {log}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 适配完成后的操作按钮 */}
+            {adaptComplete && (
+              <div style={{ marginTop: 16, display: 'flex', gap: 12, justifyContent: 'center' }}>
+                <Button icon={<DownloadOutlined />}>导出适配报告</Button>
+                <Button type="primary" icon={<CaretRightOutlined />} onClick={goToDeploy}>
+                  前往部署
+                </Button>
+              </div>
+            )}
           </Card>
 
           {/* 适配对比视图 */}
-          <Card title="适配前后效果对比">
+          <Card
+            title="适配前后效果对比"
+            style={{ marginTop: 16 }}
+            extra={
+              adaptComplete && (
+                <Tag color="success" style={{ fontSize: 13, padding: '2px 12px' }}>
+                  <CheckCircleOutlined /> 适配成功
+                </Tag>
+              )
+            }
+          >
             {comparison && (
               <table className="comparison-table">
                 <thead>
@@ -186,15 +503,23 @@ export default function ModelAdapt() {
                 <tbody>
                   <tr>
                     <td>模型精度</td>
-                    <td>{comparison.accuracyBefore}%</td>
-                    <td style={{ color: '#52c41a' }}>{comparison.accuracyAfter}%</td>
-                    <td className="improvement">↑ {((comparison.accuracyAfter - comparison.accuracyBefore) / comparison.accuracyBefore * 100).toFixed(1)}%</td>
+                    <td style={{ color: '#ff4d4f' }}>{animatingValues.accuracyBefore}%</td>
+                    <td style={{ color: '#52c41a', fontWeight: showComparison ? 700 : 400 }}>
+                      {animatingValues.accuracyAfter}%
+                    </td>
+                    <td className="improvement">
+                      {showComparison ? `↑ ${((94 - 72) / 72 * 100).toFixed(1)}%` : '-'}
+                    </td>
                   </tr>
                   <tr>
                     <td>推理延迟</td>
-                    <td>{comparison.latencyBefore}ms</td>
-                    <td style={{ color: '#52c41a' }}>{comparison.latencyAfter}ms</td>
-                    <td className="improvement">↓ {((comparison.latencyBefore - comparison.latencyAfter) / comparison.latencyBefore * 100).toFixed(1)}%</td>
+                    <td style={{ color: '#ff4d4f' }}>{animatingValues.latencyBefore}ms</td>
+                    <td style={{ color: '#52c41a', fontWeight: showComparison ? 700 : 400 }}>
+                      {animatingValues.latencyAfter}ms
+                    </td>
+                    <td className="improvement">
+                      {showComparison ? `↓ ${((180 - 65) / 180 * 100).toFixed(1)}%` : '-'}
+                    </td>
                   </tr>
                   <tr>
                     <td>硬件兼容性</td>
@@ -211,9 +536,6 @@ export default function ModelAdapt() {
                 </tbody>
               </table>
             )}
-            <div style={{ marginTop: 12, textAlign: 'right' }}>
-              <Button icon={<DownloadOutlined />} size="small">导出适配报告</Button>
-            </div>
           </Card>
         </Col>
 

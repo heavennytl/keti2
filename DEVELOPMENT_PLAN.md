@@ -1,6 +1,6 @@
 # 《工业模型适配与端边云协同部署运行系统》Demo 开发计划
 
-> 基于 PRDv2.md 的实施计划
+> 基于 PRDv1.md 的实施计划
 > 核心定位：解决工业模型不易用、落地频繁适配的问题
 > 技术栈：React 18 + TypeScript + Vite + Ant Design + Zustand + ECharts + AntV X6 + MSW + Framer Motion
 
@@ -69,7 +69,7 @@
 ```
 
 #### 1.3 项目目录结构创建
-- [ ] 按 PRDv2.md 4.3 节创建完整目录结构
+- [ ] 按 PRDv1.md 4.3 节创建完整目录结构
 - [ ] 创建各页面的初始文件（空组件占位）
 - [ ] **特别注意：创建 ModelAdapt 目录（模型适配中心）**
 
@@ -134,7 +134,7 @@ const routes = [
 #### 2.4 Mock 数据层
 - [ ] 初始化 MSW（浏览器端 Service Worker）
 - [ ] 创建 Mock 数据工厂函数（生成动态数据）
-- [ ] 实现所有 API handlers（参考 PRDv2.md 第7章 API 接口表）
+- [ ] 实现所有 API handlers（参考 PRDv1.md 第7章 API 接口表）
 - [ ] **重点实现适配相关 handlers**：← 新增
   - `/api/adapt/tasks` - 适配任务列表/创建
   - `/api/adapt/tasks/:id` - 适配任务详情
@@ -476,7 +476,7 @@ mocks/
 | 交付物 | 说明 |
 |--------|------|
 | 完整前端项目源码 | 包含9个页面和全部功能 |
-| PRDv2.md | 优化后的 PRD 文档（核心定位：解决模型适配问题） |
+| PRDv1.md | 优化后的 PRD 文档（核心定位：解决模型适配问题） |
 | 项目启动说明 | README.md（含安装和运行步骤） |
 | 演示流程说明 | 8步演示流程操作指南（从适配到部署运行） |
 
