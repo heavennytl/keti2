@@ -1,194 +1,280 @@
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Card, Row, Col, Statistic, Table, Tag, Badge, Button } from 'antd';
-import { WarningOutlined, CaretRightOutlined } from '@ant-design/icons';
-import { useSceneStore } from '@/stores/useSceneStore';
+import { useEffect, useState } from 'react';
+import { Card, Row, Col, Statistic, Table, Tag, Button, Progress, Tooltip, Badge, Modal, Descriptions } from 'antd';
+import { SwapOutlined, CheckCircleOutlined, CloseCircleOutlined, WarningOutlined, InfoCircleOutlined, ThunderboltOutlined, LineChartOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+import { useMonitorStore } from '@/stores/useMonitorStore';
+import ReactEChartsCore from 'echarts-for-react';
+import LoadingState from '@/components/LoadingState';
+import ErrorState from '@/components/ErrorState';
 
-const baseAlerts = [
-  { key: '1', time: '14:23:05', level: 'error', message: '焊接车间-A线 GPU温度过高(87°C)', node: '焊接车间-A线', status: '未处理' },
-  { key: '2', time: '14:20:12', level: 'warning', message: '装配线-B线 推理延迟异常(152ms)', node: '装配线-B线', status: '处理中' },
-  { key: '3', time: '14:15:33', level: 'warning', message: '打磨车间-C线 模型精度下降(72%)', node: '打磨车间-C线', status: '已忽略' },
-  { key: '4', time: '14:10:00', level: 'info', message: '质检线-D线 模型部署完成', node: '质检线-D线', status: '已处理' },
-  { key: '5', time: '14:05:22', level: 'error', message: '焊接车间-A线 节点离线', node: '焊接车间-A线', status: '未处理' },
-];
+// 适配质量趋势数据
+const adaptTrendData = {
+  dates: ['5/7', '5/8', '5/9', '5/10', '5/11', '5/12', '5/13'],
+  series: [
+    { name: '焊接车间-A线', data: [88, 90, 91, 92, 93, 94, 94] },
+    { name: '装配线-B线', data: [85, 86, 88, 89, 90, 91, 92] },
+    { name: '打磨车间-C线', data: [55, 58, 60, 62, 63, 64, 65] },
+    { name: '质检线-D线', data: [82, 83, 84, 85, 86, 87, 88] },
+  ],
+};
 
-const baseMetrics = [
-  { key: '1', node: '焊接车间-A线', cpu: 78, gpu: 92, memory: 65, latency: 85, throughput: 120, status: 'warning' },
-  { key: '2', node: '装配线-B线', cpu: 45, gpu: 67, memory: 52, latency: 62, throughput: 95, status: 'online' },
-  { key: '3', node: '打磨车间-C线', cpu: 32, gpu: 45, memory: 38, latency: 48, throughput: 78, status: 'online' },
-  { key: '4', node: '质检线-D线', cpu: 55, gpu: 72, memory: 58, latency: 55, throughput: 88, status: 'online' },
-];
-
-const highLoadAlerts = [
-  { key: '1', time: '14:23:05', level: 'error', message: '焊接车间-A线 GPU温度过高(87°C)', node: '焊接车间-A线', status: '未处理' },
-  { key: '2', time: '14:22:30', level: 'warning', message: '焊接车间-A线 推理延迟异常(152ms)', node: '焊接车间-A线', status: '未处理' },
-  { key: '3', time: '14:20:12', level: 'warning', message: '装配线-B线 推理延迟异常(142ms)', node: '装配线-B线', status: '处理中' },
-  { key: '4', time: '14:18:00', level: 'error', message: '焊接车间-A线 GPU负载超过95%', node: '焊接车间-A线', status: '未处理' },
-  { key: '5', time: '14:15:33', level: 'warning', message: '打磨车间-C线 模型精度下降(72%)', node: '打磨车间-C线', status: '已忽略' },
-  { key: '6', time: '14:10:00', level: 'info', message: '质检线-D线 模型部署完成', node: '质检线-D线', status: '已处理' },
-  { key: '7', time: '14:05:22', level: 'error', message: '焊接车间-A线 节点离线', node: '焊接车间-A线', status: '未处理' },
-];
-
-const highLoadMetrics = [
-  { key: '1', node: '焊接车间-A线', cpu: 92, gpu: 97, memory: 85, latency: 152, throughput: 65, status: 'warning' },
-  { key: '2', node: '装配线-B线', cpu: 78, gpu: 88, memory: 72, latency: 142, throughput: 75, status: 'warning' },
-  { key: '3', node: '打磨车间-C线', cpu: 45, gpu: 55, memory: 42, latency: 58, throughput: 68, status: 'online' },
-  { key: '4', node: '质检线-D线', cpu: 65, gpu: 78, memory: 62, latency: 75, throughput: 82, status: 'online' },
-];
-
-const faultAlerts = [
-  { key: '1', time: '14:23:05', level: 'error', message: '焊接车间-A线 GPU温度过高(87°C)', node: '焊接车间-A线', status: '未处理' },
-  { key: '2', time: '14:22:30', level: 'error', message: '焊接车间-A线 推理服务异常', node: '焊接车间-A线', status: '未处理' },
-  { key: '3', time: '14:20:12', level: 'error', message: '焊接车间-A线 节点离线', node: '焊接车间-A线', status: '未处理' },
-  { key: '4', time: '14:18:00', level: 'error', message: '装配线-B线 推理延迟异常(235ms)', node: '装配线-B线', status: '未处理' },
-  { key: '5', time: '14:15:33', level: 'warning', message: '打磨车间-C线 模型精度下降(65%)', node: '打磨车间-C线', status: '未处理' },
-  { key: '6', time: '14:10:00', level: 'error', message: '质检线-D线 推理服务异常', node: '质检线-D线', status: '未处理' },
-  { key: '7', time: '14:05:22', level: 'error', message: '焊接车间-A线 节点离线', node: '焊接车间-A线', status: '未处理' },
-  { key: '8', time: '14:00:00', level: 'error', message: '系统检测到多个节点异常', node: '系统', status: '未处理' },
-];
-
-const faultMetrics = [
-  { key: '1', node: '焊接车间-A线', cpu: 0, gpu: 0, memory: 0, latency: 0, throughput: 0, status: 'offline' },
-  { key: '2', node: '装配线-B线', cpu: 85, gpu: 92, memory: 78, latency: 235, throughput: 35, status: 'warning' },
-  { key: '3', node: '打磨车间-C线', cpu: 38, gpu: 48, memory: 35, latency: 55, throughput: 45, status: 'online' },
-  { key: '4', node: '质检线-D线', cpu: 72, gpu: 82, memory: 68, latency: 180, throughput: 42, status: 'warning' },
-];
+// 告警适配联动详情
+const alertAdaptDetails: Record<string, { model: string; adaptScore: number; adapters: string[]; suggestion: string }> = {
+  '1': { model: 'WeldDetect-v2', adaptScore: 94, adapters: ['HikVision-CAM-v2', 'Siemens-S7-v1'], suggestion: '适配评分正常，建议检查网络延迟' },
+  '2': { model: 'SurfaceDefect-v3', adaptScore: 65, adapters: [], suggestion: '适配评分偏低，建议前往适配中心优化适配器配置' },
+  '3': { model: 'AssemblyCheck-v1', adaptScore: 92, adapters: ['Basler-CAM-v1', 'Mitsubishi-FX-v2'], suggestion: '适配状态良好，建议检查节点资源使用情况' },
+  '4': { model: 'QualityCheck-v2', adaptScore: 88, adapters: ['HikVision-CAM-v2'], suggestion: '适配评分正常，建议关注节点负载变化' },
+};
 
 export default function Monitor() {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { mode } = useSceneStore();
-  const deployedModel = searchParams.get('deployedModel');
+  const { alerts, metrics, loading, error, fetchAlerts, fetchMetrics } = useMonitorStore();
+  const [adaptDetailModal, setAdaptDetailModal] = useState<any>(null);
 
-  const alerts = mode === 'highLoad' ? highLoadAlerts : mode === 'fault' ? faultAlerts : baseAlerts;
-  const metrics = mode === 'highLoad' ? highLoadMetrics : mode === 'fault' ? faultMetrics : baseMetrics;
+  useEffect(() => {
+    fetchAlerts();
+    fetchMetrics();
+  }, [fetchAlerts, fetchMetrics]);
 
-  const handleAlertAction = (alert: typeof baseAlerts[0]) => {
-    navigate(`/resource-scheduler?alert=${encodeURIComponent(alert.node)}`);
-  };
+  if (loading) return <LoadingState tip="加载监控数据..." fullPage />;
+  if (error) return <ErrorState message={error} onRetry={() => { fetchAlerts(); fetchMetrics(); }} />;
+
+  const errorAlerts = alerts.filter(a => a.level === 'error');
+  const warningAlerts = alerts.filter(a => a.level === 'warning');
+  const unprocessedAlerts = alerts.filter(a => a.status === '未处理');
+  const adaptRelatedAlerts = alerts.filter(a => a.adaptRelated);
+
+  const onlineNodes = metrics.filter(m => m.status === 'online').length;
+  const warningNodes = metrics.filter(m => m.status === 'warning').length;
+  const avgCpu = Math.round(metrics.reduce((s, m) => s + m.cpu, 0) / metrics.length);
+  const avgGpu = Math.round(metrics.reduce((s, m) => s + m.gpu, 0) / metrics.length);
+  const avgLatency = Math.round(metrics.reduce((s, m) => s + m.latency, 0) / metrics.length);
+  const avgAdaptScore = Math.round(metrics.reduce((s, m) => s + (m.adaptScore || 0), 0) / metrics.length);
 
   return (
     <div>
       <Row gutter={[16, 16]}>
-        <Col span={4}>
-          <Card>
-            <Statistic title="当前告警" value={alerts.filter(a => a.status === '未处理').length}
-              valueStyle={{ color: alerts.filter(a => a.status === '未处理').length > 0 ? '#ff4d4f' : '#52c41a' }} />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card>
-            <Statistic title="未处理告警" value={alerts.filter(a => a.status === '未处理').length} valueStyle={{ color: '#ff4d4f' }} />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card>
-            <Statistic title="GPU平均利用率" value={Math.round(metrics.reduce((sum, m) => sum + m.gpu, 0) / metrics.length)} suffix="%"
-              valueStyle={{ color: metrics.some(m => m.gpu > 80) ? '#ff4d4f' : metrics.some(m => m.gpu > 60) ? '#faad14' : '#52c41a' }} />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card>
-            <Statistic title="平均延迟" value={Math.round(metrics.reduce((sum, m) => sum + m.latency, 0) / metrics.length)} suffix="ms"
-              valueStyle={{ color: metrics.some(m => m.latency > 100) ? '#ff4d4f' : '#52c41a' }} />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card>
-            <Statistic title="在线节点" value={metrics.filter(m => m.status !== 'offline').length} suffix={`/ ${metrics.length}`}
-              valueStyle={{ color: metrics.some(m => m.status === 'offline') ? '#faad14' : '#52c41a' }} />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card>
-            <Statistic title="总吞吐量" value={metrics.reduce((sum, m) => sum + m.throughput, 0)} suffix="FPS" />
-          </Card>
-        </Col>
+        <Col span={3}><Card><Statistic title="在线节点" value={onlineNodes} valueStyle={{ color: '#52c41a' }} /></Card></Col>
+        <Col span={3}><Card><Statistic title="告警节点" value={warningNodes} valueStyle={{ color: '#faad14' }} /></Card></Col>
+        <Col span={3}><Card><Statistic title="未处理告警" value={unprocessedAlerts.length} valueStyle={{ color: '#ff4d4f' }} /></Card></Col>
+        <Col span={3}><Card><Statistic title="适配相关告警" value={adaptRelatedAlerts.length} valueStyle={{ color: '#722ed1' }} /></Card></Col>
+        <Col span={3}><Card><Statistic title="平均CPU" value={avgCpu} suffix="%" /></Card></Col>
+        <Col span={3}><Card><Statistic title="平均GPU" value={avgGpu} suffix="%" /></Card></Col>
+        <Col span={3}><Card><Statistic title="平均延迟" value={avgLatency} suffix="ms" /></Card></Col>
+        <Col span={3}><Card><Statistic title="平均适配评分" value={avgAdaptScore} suffix="%" valueStyle={{ color: avgAdaptScore >= 80 ? '#52c41a' : '#faad14' }} /></Card></Col>
       </Row>
 
-      {deployedModel && (
-        <Card style={{ marginTop: 16, borderLeft: '3px solid #52c41a' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 15, fontWeight: 600 }}>{deployedModel}</span>
-            <Tag color="success">已部署</Tag>
-            <span style={{ color: '#a0a0a0', fontSize: 13 }}>已成功部署，正在运行中</span>
-          </div>
-        </Card>
-      )}
-
-      {mode === 'highLoad' && (
-        <Card style={{ marginTop: 16, borderLeft: '3px solid #faad14', background: 'rgba(250, 173, 20, 0.05)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <WarningOutlined style={{ color: '#faad14', fontSize: 18 }} />
-            <span style={{ color: '#faad14', fontWeight: 600 }}>高负载模式</span>
-            <span style={{ color: '#a0a0a0', fontSize: 13 }}>GPU 负载过高，建议前往资源调度中心调整策略</span>
-            <Button size="small" type="primary" onClick={() => navigate('/resource-scheduler?alert=焊接车间-A线')}>前往处理</Button>
-          </div>
-        </Card>
-      )}
-
-      {mode === 'fault' && (
-        <Card style={{ marginTop: 16, borderLeft: '3px solid #ff4d4f', background: 'rgba(255, 77, 79, 0.05)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <WarningOutlined style={{ color: '#ff4d4f', fontSize: 18 }} />
-            <span style={{ color: '#ff4d4f', fontWeight: 600 }}>故障模式</span>
-            <span style={{ color: '#a0a0a0', fontSize: 13 }}>多个节点异常，请立即处理</span>
-            <Button size="small" type="primary" danger onClick={() => navigate('/resource-scheduler?alert=焊接车间-A线')}>紧急处理</Button>
-          </div>
-        </Card>
-      )}
-
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        <Col span={16}>
-          <Card title="节点运行指标">
+        <Col span={24}>
+          <Card title="节点监控指标">
             <Table
               dataSource={metrics}
               columns={[
                 { title: '节点', dataIndex: 'node', key: 'node' },
-                { title: 'CPU(%)', dataIndex: 'cpu', key: 'cpu', render: (v: number) => (
-                  <span style={{ color: v > 80 ? '#ff4d4f' : v > 60 ? '#faad14' : '#52c41a' }}>{v}%</span>
-                )},
-                { title: 'GPU(%)', dataIndex: 'gpu', key: 'gpu', render: (v: number) => (
-                  <span style={{ color: v > 80 ? '#ff4d4f' : v > 60 ? '#faad14' : '#52c41a' }}>{v}%</span>
-                )},
-                { title: '内存(%)', dataIndex: 'memory', key: 'memory' },
-                { title: '延迟(ms)', dataIndex: 'latency', key: 'latency', render: (v: number) => (
-                  <span style={{ color: v > 100 ? '#ff4d4f' : v > 60 ? '#faad14' : '#52c41a' }}>{v}ms</span>
-                )},
+                {
+                  title: '状态', dataIndex: 'status', key: 'status',
+                  render: (s: string) => (
+                    <Badge status={s === 'online' ? 'success' : s === 'warning' ? 'warning' : 'error'}
+                      text={s === 'online' ? '在线' : s === 'warning' ? '告警' : '离线'} />
+                  ),
+                },
+                {
+                  title: 'CPU', dataIndex: 'cpu', key: 'cpu',
+                  render: (v: number) => <Progress percent={v} size="small" strokeColor={v > 80 ? '#ff4d4f' : v > 60 ? '#faad14' : '#52c41a'} />,
+                },
+                {
+                  title: 'GPU', dataIndex: 'gpu', key: 'gpu',
+                  render: (v: number) => <Progress percent={v} size="small" strokeColor={v > 80 ? '#ff4d4f' : v > 60 ? '#faad14' : '#52c41a'} />,
+                },
+                {
+                  title: '内存', dataIndex: 'memory', key: 'memory',
+                  render: (v: number) => <Progress percent={v} size="small" strokeColor={v > 80 ? '#ff4d4f' : v > 60 ? '#faad14' : '#52c41a'} />,
+                },
+                { title: '延迟(ms)', dataIndex: 'latency', key: 'latency' },
                 { title: '吞吐量(FPS)', dataIndex: 'throughput', key: 'throughput' },
-                { title: '状态', dataIndex: 'status', key: 'status', render: (s: string) => (
-                  <span className={`status-dot ${s}`} />
-                )},
+                {
+                  title: '适配评分', dataIndex: 'adaptScore', key: 'adaptScore',
+                  render: (v: number | undefined) => v ? (
+                    <Tooltip title="模型适配质量评分">
+                      <Progress percent={v} size="small" format={(p) => `${p}%`}
+                        strokeColor={v >= 85 ? '#52c41a' : v >= 70 ? '#faad14' : '#ff4d4f'} />
+                    </Tooltip>
+                  ) : <Tag color="default">无数据</Tag>,
+                },
+                {
+                  title: '操作', key: 'action', render: (_: any, _record: typeof metrics[0]) => (
+                    <Button type="link" size="small" icon={<SwapOutlined />} onClick={() => navigate('/model-adapt')}>
+                      适配优化
+                    </Button>
+                  ),
+                },
               ]}
               rowKey="key"
               size="small"
-              pagination={false}
             />
           </Card>
         </Col>
-        <Col span={8}>
-          <Card title="实时告警列表" extra={
-            alerts.filter(a => a.status === '未处理').length > 0 && (
-              <Tag color="error">{alerts.filter(a => a.status === '未处理').length} 条未处理</Tag>
-            )
-          }>
-            {alerts.slice(0, 7).map(a => (
-              <div key={a.key} style={{ padding: '8px 0', borderBottom: '1px solid #303030', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                <Badge status={a.level === 'error' ? 'error' : a.level === 'warning' ? 'warning' : 'processing'} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, color: '#a0a0a0' }}>{a.time}</div>
-                  <div style={{ fontSize: 13, color: a.level === 'error' ? '#ff4d4f' : a.level === 'warning' ? '#faad14' : '#e5e5e5' }}>{a.message}</div>
-                  <div style={{ fontSize: 12, color: '#a0a0a0', marginTop: 2, display: 'flex', gap: 8, alignItems: 'center' }}>
-                    {a.node} · <Tag>{a.status}</Tag>
-                    {a.status === '未处理' && (
-                      <Button type="link" size="small" icon={<CaretRightOutlined />} onClick={() => handleAlertAction(a)}>处理</Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+      </Row>
+
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+        <Col span={12}>
+          <Card title="资源利用率概览">
+            <ReactEChartsCore option={{
+              tooltip: { trigger: 'axis' },
+              legend: { data: ['CPU', 'GPU', '内存'], textStyle: { color: '#a0a0a0' } },
+              grid: { left: 40, right: 10, top: 40, bottom: 25 },
+              xAxis: { type: 'category', data: metrics.map(m => m.node.split('-')[0]), axisLabel: { color: '#a0a0a0', fontSize: 10 } },
+              yAxis: { type: 'value', max: 100, axisLabel: { color: '#a0a0a0', fontSize: 10 }, splitLine: { lineStyle: { color: '#1a1a1a' } } },
+              series: [
+                { name: 'CPU', type: 'bar', data: metrics.map(m => m.cpu), itemStyle: { color: '#1677ff', borderRadius: [4, 4, 0, 0] } },
+                { name: 'GPU', type: 'bar', data: metrics.map(m => m.gpu), itemStyle: { color: '#52c41a', borderRadius: [4, 4, 0, 0] } },
+                { name: '内存', type: 'bar', data: metrics.map(m => m.memory), itemStyle: { color: '#faad14', borderRadius: [4, 4, 0, 0] } },
+              ],
+            }} style={{ height: 300 }} />
+          </Card>
+        </Col>
+        <Col span={12}>
+          <Card title="适配评分分布">
+            <ReactEChartsCore option={{
+              tooltip: { trigger: 'axis' },
+              grid: { left: 40, right: 10, top: 20, bottom: 25 },
+              xAxis: { type: 'category', data: metrics.map(m => m.node.split('-')[0]), axisLabel: { color: '#a0a0a0', fontSize: 10 } },
+              yAxis: { type: 'value', max: 100, axisLabel: { color: '#a0a0a0', fontSize: 10 }, splitLine: { lineStyle: { color: '#1a1a1a' } } },
+              series: [{
+                type: 'bar', data: metrics.map(m => m.adaptScore || 0),
+                itemStyle: {
+                  color: (params: any) => {
+                    const v = params.value;
+                    return v >= 85 ? '#52c41a' : v >= 70 ? '#faad14' : '#ff4d4f';
+                  },
+                  borderRadius: [4, 4, 0, 0],
+                },
+                label: { show: true, position: 'top', color: '#a0a0a0', fontSize: 10, formatter: '{c}%' },
+              }],
+            }} style={{ height: 300 }} />
           </Card>
         </Col>
       </Row>
+
+      {/* 适配质量趋势图 */}
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+        <Col span={24}>
+          <Card title={<span><LineChartOutlined style={{ marginRight: 6 }} />适配质量趋势图</span>}>
+            <ReactEChartsCore option={{
+              tooltip: { trigger: 'axis' },
+              legend: { data: adaptTrendData.series.map(s => s.name), textStyle: { color: '#a0a0a0' } },
+              grid: { left: 40, right: 20, top: 40, bottom: 25 },
+              xAxis: { type: 'category', data: adaptTrendData.dates, axisLabel: { color: '#a0a0a0', fontSize: 10 }, boundaryGap: false },
+              yAxis: { type: 'value', min: 50, max: 100, axisLabel: { color: '#a0a0a0', fontSize: 10, formatter: '{value}%' }, splitLine: { lineStyle: { color: '#1a1a1a' } } },
+              series: adaptTrendData.series.map((s, i) => ({
+                name: s.name,
+                type: 'line',
+                smooth: true,
+                data: s.data,
+                symbol: 'circle',
+                symbolSize: 6,
+                lineStyle: { width: 2 },
+                itemStyle: { color: ['#1677ff', '#52c41a', '#faad14', '#722ed1'][i] },
+                areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: ['rgba(22, 119, 255, 0.2)', 'rgba(82, 196, 26, 0.2)', 'rgba(250, 173, 20, 0.2)', 'rgba(114, 46, 209, 0.2)'][i] }, { offset: 1, color: 'rgba(0,0,0,0)' }] } },
+              })),
+            }} style={{ height: 300 }} />
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+        <Col span={24}>
+          <Card title="告警列表" extra={
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Tag color="error">错误 {errorAlerts.length}</Tag>
+              <Tag color="warning">警告 {warningAlerts.length}</Tag>
+              <Tag color="purple">适配相关 {adaptRelatedAlerts.length}</Tag>
+              <Button size="small" icon={<SwapOutlined />} onClick={() => navigate('/model-adapt')}>适配优化</Button>
+            </div>
+          }>
+            <Table
+              dataSource={alerts}
+              columns={[
+                { title: '时间', dataIndex: 'time', key: 'time', width: 80 },
+                {
+                  title: '级别', dataIndex: 'level', key: 'level', width: 70,
+                  render: (l: string) => l === 'error' ? <Tag color="error" icon={<CloseCircleOutlined />}>错误</Tag> :
+                    l === 'warning' ? <Tag color="warning" icon={<WarningOutlined />}>警告</Tag> :
+                    <Tag color="info" icon={<InfoCircleOutlined />}>信息</Tag>,
+                },
+                { title: '告警内容', dataIndex: 'message', key: 'message' },
+                { title: '节点', dataIndex: 'node', key: 'node' },
+                {
+                  title: '状态', dataIndex: 'status', key: 'status',
+                  render: (s: string) => {
+                    const colorMap: Record<string, string> = { '未处理': 'error', '处理中': 'processing', '已忽略': 'default', '已处理': 'success' };
+                    return <Tag color={colorMap[s] || 'default'}>{s}</Tag>;
+                  },
+                },
+                {
+                  title: '适配相关', dataIndex: 'adaptRelated', key: 'adaptRelated',
+                  render: (v: boolean | undefined) => v ? <Tag color="purple" icon={<SwapOutlined />}>是</Tag> : <Tag color="default">否</Tag>,
+                },
+                {
+                  title: '操作', key: 'action', render: (_: any, record: typeof alerts[0]) => (
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {record.adaptRelated && (
+                        <Button type="link" size="small" icon={<ThunderboltOutlined />}
+                          onClick={() => setAdaptDetailModal({ ...record, detail: alertAdaptDetails[record.key] })}>
+                          适配详情
+                        </Button>
+                      )}
+                      {record.status === '未处理' && (
+                        <Button type="link" size="small" icon={<CheckCircleOutlined />}>处理</Button>
+                      )}
+                    </div>
+                  ),
+                },
+              ]}
+              rowKey="key"
+              size="small"
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* 告警适配联动详情弹窗 */}
+      <Modal title={`告警适配联动详情 - ${adaptDetailModal?.node || ''}`} open={!!adaptDetailModal} onCancel={() => setAdaptDetailModal(null)}
+        footer={[
+          <Button key="close" onClick={() => setAdaptDetailModal(null)}>关闭</Button>,
+          <Button key="adapt" type="primary" icon={<SwapOutlined />} onClick={() => { setAdaptDetailModal(null); navigate('/model-adapt'); }}>
+            前往适配中心
+          </Button>,
+        ]} width={500}>
+        {adaptDetailModal && adaptDetailModal.detail && (
+          <div>
+            <Descriptions column={2} size="small" style={{ marginBottom: 16 }}>
+              <Descriptions.Item label="告警时间">{adaptDetailModal.time}</Descriptions.Item>
+              <Descriptions.Item label="告警级别">
+                {adaptDetailModal.level === 'error' ? <Tag color="error">错误</Tag> :
+                 adaptDetailModal.level === 'warning' ? <Tag color="warning">警告</Tag> : <Tag color="info">信息</Tag>}
+              </Descriptions.Item>
+              <Descriptions.Item label="告警内容" span={2}>{adaptDetailModal.message}</Descriptions.Item>
+              <Descriptions.Item label="关联模型">{adaptDetailModal.detail.model}</Descriptions.Item>
+              <Descriptions.Item label="适配评分">
+                <Progress percent={adaptDetailModal.detail.adaptScore} size="small" format={(p) => `${p}%`}
+                  strokeColor={adaptDetailModal.detail.adaptScore >= 85 ? '#52c41a' : adaptDetailModal.detail.adaptScore >= 70 ? '#faad14' : '#ff4d4f'} />
+              </Descriptions.Item>
+            </Descriptions>
+            <div style={{ fontWeight: 600, marginBottom: 8, color: '#a0a0a0' }}>已选适配器</div>
+            {adaptDetailModal.detail.adapters.length > 0 ? (
+              adaptDetailModal.detail.adapters.map((adapter: string, i: number) => (
+                <Tag key={i} color="blue" style={{ marginBottom: 4 }}>{adapter}</Tag>
+              ))
+            ) : (
+              <Tag color="default">无适配器</Tag>
+            )}
+            <div style={{ marginTop: 12, padding: '8px 12px', background: 'rgba(114, 46, 209, 0.1)', borderRadius: 8, fontSize: 13, color: '#722ed1' }}>
+              <ThunderboltOutlined style={{ marginRight: 4 }} />{adaptDetailModal.detail.suggestion}
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

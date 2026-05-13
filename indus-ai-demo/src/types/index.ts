@@ -100,6 +100,33 @@ export interface AdaptComparison {
   protocolAfter: string;
 }
 
+// ============ 适配推荐 ============
+export interface AdaptRecommendation {
+  id: string;
+  name: string;
+  score: number;
+  successRate: number;
+  estimatedDays: number;
+  cost: '低' | '中' | '高';
+  adapters: string[];
+  similarScenes: Array<{ scene: string; similarity: number }>;
+  isRecommended: boolean;
+}
+
+// ============ ROI ============
+export interface AdaptROI {
+  totalSavedCost: number;
+  avgAdaptDays: number;
+  cycleReduction: number;
+  templateReuseRate: number;
+  manualCost: number;
+  platformCost: number;
+  manualDays: number;
+  platformDays: number;
+  manualEngineers: string;
+  platformEngineers: string;
+}
+
 // ============ 推理链 ============
 export type PipelineNodeType = 'ai' | 'logic' | 'execute' | 'output';
 
@@ -128,7 +155,7 @@ export interface Alert {
 }
 
 // ============ 资源 ============
-export type ScheduleStrategy = '负载均衡优先' | '时延优先' | '能耗优先' | '成本优先';
+export type ScheduleStrategy = '负载均衡优先' | '时延优先' | '能耗优先' | '成本优先' | '性能优先' | '适配质量优先';
 
 export interface ResourceComparison {
   latencyBefore: number;
@@ -144,9 +171,15 @@ export interface ResourceComparison {
 // ============ 兼容性矩阵 ============
 export type CompatibilityLevel = 'full' | 'partial' | 'none';
 
+export interface CompatibilityCell {
+  level: CompatibilityLevel;
+  score: number;
+  adaptSuggestion?: string;
+}
+
 export interface CompatibilityMatrix {
   nodeName: string;
-  models: Record<string, CompatibilityLevel>;
+  models: Record<string, CompatibilityCell>;
 }
 
 // ============ 驾驶舱 ============
