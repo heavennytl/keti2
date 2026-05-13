@@ -2,16 +2,11 @@ import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { Card, Row, Col, Statistic, Table, Tag, Button, Select, Progress, Tooltip, message } from 'antd';
 import { SwapOutlined, PlayCircleOutlined, StopOutlined } from '@ant-design/icons';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import ReactEChartsCore from 'echarts-for-react/lib/core';
-import * as echarts from 'echarts/core';
-import { HeatmapChart } from 'echarts/charts';
-import { GridComponent, TooltipComponent, VisualMapComponent } from 'echarts/components';
-import { CanvasRenderer } from 'echarts/renderers';
+import ReactEChartsCore from 'echarts-for-react';
+import * as echarts from 'echarts';
 import { useResourceStore } from '@/stores/useResourceStore';
 import LoadingState from '@/components/LoadingState';
 import ErrorState from '@/components/ErrorState';
-
-echarts.use([HeatmapChart, GridComponent, TooltipComponent, VisualMapComponent, CanvasRenderer]);
 
 // 各策略对应的适配评分影响
 const strategyImpact: Record<string, { adaptDelta: number; desc: string }> = {
