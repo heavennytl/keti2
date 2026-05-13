@@ -237,40 +237,40 @@ export default function ModelAdapt() {
 
   return (
     <div style={{ padding: '0 4px' }}>
-      {/* ===== 第1行：顶部概览 ===== */}
-      <Row gutter={[16, 16]} style={{ display: 'flex', alignItems: 'stretch' }}>
-        <Col span={4} style={{ display: 'flex' }}>
-          <Card size="small" styles={{ body: { padding: '16px 20px' } }} style={{ flex: 1 }}>
+      {/* ===== 第1行：顶部概览（响应式：小屏幕每行2个，大屏幕每行6个） ===== */}
+      <Row gutter={[12, 12]} style={{ display: 'flex', alignItems: 'stretch' }}>
+        <Col xs={12} sm={8} md={4} style={{ display: 'flex' }}>
+          <Card size="small" styles={{ body: { padding: '12px 16px' } }} style={{ flex: 1 }}>
             <Statistic title="待适配模型" value={tasks.filter(t => t.status === '待开始').length}
-              valueStyle={{ fontSize: 28, fontWeight: 700, color: '#1677ff' }} />
+              valueStyle={{ fontSize: 24, fontWeight: 700, color: '#1677ff' }} />
           </Card>
         </Col>
-        <Col span={4} style={{ display: 'flex' }}>
-          <Card size="small" styles={{ body: { padding: '16px 20px' } }} style={{ flex: 1 }}>
+        <Col xs={12} sm={8} md={4} style={{ display: 'flex' }}>
+          <Card size="small" styles={{ body: { padding: '12px 16px' } }} style={{ flex: 1 }}>
             <Statistic title="已完成适配" value={tasks.filter(t => t.status === '已完成').length}
-              valueStyle={{ fontSize: 28, fontWeight: 700, color: '#52c41a' }} />
+              valueStyle={{ fontSize: 24, fontWeight: 700, color: '#52c41a' }} />
           </Card>
         </Col>
-        <Col span={4} style={{ display: 'flex' }}>
-          <Card size="small" styles={{ body: { padding: '16px 20px' } }} style={{ flex: 1 }}>
+        <Col xs={12} sm={8} md={4} style={{ display: 'flex' }}>
+          <Card size="small" styles={{ body: { padding: '12px 16px' } }} style={{ flex: 1 }}>
             <Statistic title="适配成功率" value={historySuccessRate} suffix="%"
-              valueStyle={{ fontSize: 28, fontWeight: 700, color: '#52c41a' }} />
+              valueStyle={{ fontSize: 24, fontWeight: 700, color: '#52c41a' }} />
           </Card>
         </Col>
-        <Col span={4} style={{ display: 'flex' }}>
-          <Card size="small" styles={{ body: { padding: '16px 20px' } }} style={{ flex: 1 }}>
+        <Col xs={12} sm={8} md={4} style={{ display: 'flex' }}>
+          <Card size="small" styles={{ body: { padding: '12px 16px' } }} style={{ flex: 1 }}>
             <Statistic title="平均适配周期" value={roi?.avgAdaptDays ?? 2.3} suffix="天"
-              valueStyle={{ fontSize: 28, fontWeight: 700, color: '#faad14' }} />
+              valueStyle={{ fontSize: 24, fontWeight: 700, color: '#faad14' }} />
           </Card>
         </Col>
-        <Col span={4} style={{ display: 'flex' }}>
-          <Card size="small" styles={{ body: { padding: '16px 20px' } }} style={{ flex: 1 }}>
+        <Col xs={12} sm={8} md={4} style={{ display: 'flex' }}>
+          <Card size="small" styles={{ body: { padding: '12px 16px' } }} style={{ flex: 1 }}>
             <Statistic title="适配模板数" value={templates.length}
-              valueStyle={{ fontSize: 28, fontWeight: 700, color: '#722ed1' }} />
+              valueStyle={{ fontSize: 24, fontWeight: 700, color: '#722ed1' }} />
           </Card>
         </Col>
-        <Col span={4} style={{ display: 'flex' }}>
-          <Card size="small" styles={{ body: { padding: '16px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' } }} style={{ flex: 1 }}>
+        <Col xs={12} sm={8} md={4} style={{ display: 'flex' }}>
+          <Card size="small" styles={{ body: { padding: '12px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' } }} style={{ flex: 1 }}>
             <Button type="primary" icon={<PlusOutlined />} block>
               新建适配任务
             </Button>
@@ -278,10 +278,10 @@ export default function ModelAdapt() {
         </Col>
       </Row>
 
-      {/* ===== 第2行：适配工作流 + 适配任务列表（左右两栏） ===== */}
+      {/* ===== 第2行：适配工作流 + 适配任务列表（左右两栏，响应式：小屏幕堆叠） ===== */}
       <Row gutter={[16, 16]} style={{ marginTop: 16, display: 'flex', alignItems: 'stretch' }}>
         {/* 左侧：适配工作流（主区域） */}
-        <Col span={14} style={{ display: 'flex' }}>
+        <Col xs={24} md={14} style={{ display: 'flex' }}>
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
           <Card
             title={
@@ -387,7 +387,7 @@ export default function ModelAdapt() {
         </Col>
 
         {/* 右侧：适配任务列表 */}
-        <Col span={10} style={{ display: 'flex', flexDirection: 'column' }}>
+        <Col xs={24} md={10} style={{ display: 'flex', flexDirection: 'column' }}>
           <Card
             title={
               <span style={{ fontSize: 15, fontWeight: 600 }}>
@@ -466,10 +466,10 @@ export default function ModelAdapt() {
         </Col>
       </Row>
 
-      {/* ===== 第3行：多候选方案 + 适配器联动评分 + ROI + 模板库 ===== */}
+      {/* ===== 第3行：多候选方案 + 适配器联动评分 + ROI + 模板库（响应式：小屏幕堆叠） ===== */}
       <Row gutter={[16, 16]} style={{ marginTop: 16, display: 'flex', alignItems: 'stretch' }}>
         {/* 多候选方案对比 */}
-        <Col span={8} style={{ display: 'flex' }}>
+        <Col xs={24} md={8} style={{ display: 'flex' }}>
           <Card
             title={
               <span style={{ fontSize: 15, fontWeight: 600 }}>
@@ -540,7 +540,7 @@ export default function ModelAdapt() {
         </Col>
 
         {/* 适配器联动评分 + ROI */}
-        <Col span={8} style={{ display: 'flex' }}>
+        <Col xs={24} md={8} style={{ display: 'flex' }}>
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
           {/* 适配器联动评分 */}
           <Card
@@ -635,7 +635,7 @@ export default function ModelAdapt() {
         </Col>
 
         {/* 适配模板库 */}
-        <Col span={8} style={{ display: 'flex' }}>
+        <Col xs={24} md={8} style={{ display: 'flex' }}>
           <Card
             title={
               <span style={{ fontSize: 15, fontWeight: 600 }}>
@@ -644,9 +644,10 @@ export default function ModelAdapt() {
               </span>
             }
             extra={<Button size="small" type="primary" icon={<PlusOutlined />} onClick={() => setTemplateWizardOpen(true)}>创建模板</Button>}
-            styles={{ body: { padding: 0 } }}
+            styles={{ body: { padding: 0, display: 'flex', flexDirection: 'column', flex: 1 } }}
+            style={{ flex: 1 }}
           >
-            <Table dataSource={templates} columns={templateColumns} rowKey="id" size="small" pagination={false} />
+            <Table dataSource={templates} columns={templateColumns} rowKey="id" size="small" pagination={false} scroll={{ y: 280 }} />
           </Card>
         </Col>
       </Row>
