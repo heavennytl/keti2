@@ -44,7 +44,7 @@ export default function InferenceEngine() {
         <Col span={3}>
           <Card>
             <Statistic title="操作" />
-            <Button size="small" icon={<SwapOutlined />} style={{ marginTop: 8 }} onClick={() => navigate('/model-adapt')}>
+            <Button type="primary" size="small" icon={<SwapOutlined />} style={{ marginTop: 8 }} onClick={() => navigate('/model-adapt')}>
               适配推荐
             </Button>
           </Card>

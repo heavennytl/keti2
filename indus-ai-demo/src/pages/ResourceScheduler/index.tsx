@@ -190,7 +190,7 @@ export default function ResourceScheduler() {
     },
     {
       title: '操作', key: 'action',
-      render: (_: any, record: any) => (
+      render: (_: any, _record: any) => (
         <Button type="link" size="small" icon={<SwapOutlined />} onClick={() => navigate('/model-adapt')}>
           适配优化
         </Button>
