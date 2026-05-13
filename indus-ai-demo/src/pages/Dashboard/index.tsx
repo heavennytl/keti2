@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Card, Row, Col, Statistic, Tag, Modal } from 'antd';
 import { useSceneStore } from '@/stores/useSceneStore';
+import ReactEChartsCore from 'echarts-for-react';
 
 // 拓扑图节点数据
 interface TopoNode {
@@ -284,7 +285,92 @@ export default function Dashboard() {
         </Col>
       </Row>
 
+      {/* 性能图表区域 */}
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+        <Col span={6}>
+          <Card title="GPU 利用率趋势">
+            <ReactEChartsCore
+              option={{
+                tooltip: { trigger: 'axis' },
+                grid: { left: 40, right: 10, top: 20, bottom: 25 },
+                xAxis: { type: 'category', data: ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00'], axisLabel: { color: '#a0a0a0', fontSize: 10 } },
+                yAxis: { type: 'value', max: 100, axisLabel: { color: '#a0a0a0', fontSize: 10 }, splitLine: { lineStyle: { color: '#1a1a1a' } } },
+                series: [{
+                  type: 'line', smooth: true, data: mode === 'highLoad' ? [45, 52, 68, 82, 78, 88, 97] : mode === 'fault' ? [42, 48, 55, 60, 0, 0, 0] : [42, 48, 55, 62, 58, 65, 72],
+                  lineStyle: { color: '#1677ff', width: 2 },
+                  areaStyle: { color: 'rgba(22, 119, 255, 0.1)' },
+                  symbol: 'circle', symbolSize: 4,
+                }],
+              }}
+              style={{ height: 180 }}
+            />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card title="推理延迟趋势">
+            <ReactEChartsCore
+              option={{
+                tooltip: { trigger: 'axis' },
+                grid: { left: 40, right: 10, top: 20, bottom: 25 },
+                xAxis: { type: 'category', data: ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00'], axisLabel: { color: '#a0a0a0', fontSize: 10 } },
+                yAxis: { type: 'value', axisLabel: { color: '#a0a0a0', fontSize: 10 }, splitLine: { lineStyle: { color: '#1a1a1a' } } },
+                series: [{
+                  type: 'line', smooth: true, data: mode === 'highLoad' ? [42, 48, 58, 72, 68, 85, 152] : mode === 'fault' ? [40, 45, 52, 58, 0, 0, 0] : [42, 48, 55, 62, 58, 65, 72],
+                  lineStyle: { color: '#faad14', width: 2 },
+                  areaStyle: { color: 'rgba(250, 173, 20, 0.1)' },
+                  symbol: 'circle', symbolSize: 4,
+                }],
+              }}
+              style={{ height: 180 }}
+            />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card title="吞吐量趋势 (FPS)">
+            <ReactEChartsCore
+              option={{
+                tooltip: { trigger: 'axis' },
+                grid: { left: 40, right: 10, top: 20, bottom: 25 },
+                xAxis: { type: 'category', data: ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00'], axisLabel: { color: '#a0a0a0', fontSize: 10 } },
+                yAxis: { type: 'value', axisLabel: { color: '#a0a0a0', fontSize: 10 }, splitLine: { lineStyle: { color: '#1a1a1a' } } },
+                series: [{
+                  type: 'bar', data: mode === 'highLoad' ? [120, 115, 105, 88, 92, 75, 65] : mode === 'fault' ? [118, 112, 108, 100, 0, 0, 0] : [120, 118, 115, 112, 118, 110, 108],
+                  itemStyle: { color: '#52c41a', borderRadius: [4, 4, 0, 0] },
+                }],
+              }}
+              style={{ height: 180 }}
+            />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card title="适配健康度">
+            <ReactEChartsCore
+              option={{
+                tooltip: { formatter: '{b}: {c}%' },
+                series: [{
+                  type: 'gauge',
+                  startAngle: 220,
+                  endAngle: -40,
+                  min: 0,
+                  max: 100,
+                  pointer: { show: false },
+                  progress: { show: true, width: 12, itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 0, colorStops: [{ offset: 0, color: '#1677ff' }, { offset: 1, color: '#52c41a' }] } } },
+                  axisLine: { lineStyle: { width: 12, color: [[1, '#1a1a1a']] } },
+                  axisTick: { show: false },
+                  splitLine: { show: false },
+                  axisLabel: { show: false },
+                  detail: { fontSize: 24, fontWeight: 600, color: '#e5e5e5', offsetCenter: [0, '40%'] },
+                  data: [{ value: config.adaptQuality.max, name: '健康度' }],
+                }],
+              }}
+              style={{ height: 180 }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
       {/* 节点详情弹窗 */}
+
       <Modal
         title={selectedNode?.label.split('\n')[0]}
         open={!!selectedNode}
